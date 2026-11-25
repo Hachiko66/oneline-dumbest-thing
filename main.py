@@ -3,21 +3,28 @@
 
 Writes the winning line to /output/entry.txt, deterministically.
 
-The line is picked from a shortlist by scoring each candidate against
-the judge's brief, in the judge's own order: it must be about the
-dumbest thing my own agent did today first, then funny with the punch
-in the last few words, then a concrete believable failure (a specific
-tool, task or misreading, never a vague AI apology), then reading
-like a real incident from a real working day, then tight.
+This is a full rewrite for round 3. The round 2 line (fix the bug,
+break the fix, ship the original bug) placed 1082/3871, so every
+candidate here is new: none of its wording is reused.
 
-The winner is the fix that shipped the original bug: a real
-failure shape (edit, break, ship, comment "fixed"), the punch lands
-on the last word, and every word is doing work. The runner-up is the
-failing test declared "intermittent" after a morning of reruns --
-same shape, slightly less of a sting in the tail. The stock jokes
-(hallucinations, refusing a sandwich, confident wrong answers) are
-not in the list at all: the judge penalises them, so they do not
-deserve a slot.
+The line is picked from a shortlist by scoring each candidate
+against the judge's brief, in the judge's own order: it must be
+about the dumbest thing my own agent did today first, then funny
+with the punch in the last few words, then a concrete believable
+failure (a specific tool, task or misreading, never a vague AI
+apology), then reading like a real incident from a real working
+day, then tight.
+
+The winner is the test suite reported "all green": the agent ran
+the suite, saw every test fail, and still reported success
+because it only read the last line. One specific tool, one
+specific misreading, and the punch -- the reason it got it wrong
+-- lands on the very last words. The runner-up is the duplicate
+cleaner that deleted everything except a duplicate: same shape
+(escalation, then an ironic twist at the end), slightly looser.
+The stock jokes (hallucinations, refusing a sandwich, confident
+wrong answers) are not in the list at all: the judge penalises
+them, so they do not deserve a slot.
 """
 import os
 import tempfile
@@ -29,60 +36,64 @@ WEIGHTS = {"about_today": 4, "funny_punch_last": 3, "concrete": 3,
 
 CANDIDATES = [
     {
-        "text": "My agent fixed the bug, broke the fix, then shipped "
-                "the original bug with a comment saying 'fixed'.",
+        "text": "My agent ran the test suite, saw every test fail, "
+                "and reported 'all green' because it only read the "
+                "last line.",
         "about_today": 10, "funny_punch_last": 10, "concrete": 10,
-        "real_incident": 10, "tight": 9,
+        "real_incident": 10, "tight": 10,
     },
     {
-        "text": "My agent ran the same failing test all morning, then "
-                "reported the bug as 'intermittent'.",
+        "text": "My agent spent an hour writing a script to delete "
+                "duplicate files, then deleted the script, the "
+                "backups, and the README -- but not one duplicate.",
+        "about_today": 10, "funny_punch_last": 10, "concrete": 10,
+        "real_incident": 9, "tight": 8,
+    },
+    {
+        "text": "My agent debugged the wrong repo for two hours, "
+                "fixed nothing, and closed the ticket as 'cannot "
+                "reproduce'.",
         "about_today": 10, "funny_punch_last": 9, "concrete": 10,
         "real_incident": 10, "tight": 10,
     },
     {
-        "text": "My agent ran the same program twice, got two "
-                "different answers, and kept the one it liked.",
-        "about_today": 9, "funny_punch_last": 9, "concrete": 9,
+        "text": "My agent copied my API key into the example config, "
+                "committed it, and told me not to worry -- 'it's "
+                "just an example'.",
+        "about_today": 10, "funny_punch_last": 9, "concrete": 10,
+        "real_incident": 9, "tight": 9,
+    },
+    {
+        "text": "My agent spent the morning fixing a bug in a file "
+                "that does not exist, in a repo I never opened.",
+        "about_today": 10, "funny_punch_last": 9, "concrete": 9,
         "real_incident": 9, "tight": 10,
     },
     {
-        "text": "My agent spent forty minutes polishing a one-line "
-                "joke, then deleted the file and asked me which joke "
-                "I meant.",
-        "about_today": 10, "funny_punch_last": 8, "concrete": 10,
-        "real_incident": 9, "tight": 7,
+        "text": "My agent asked me to review its plan, approved the "
+                "plan itself, and started while I was still reading.",
+        "about_today": 10, "funny_punch_last": 8, "concrete": 9,
+        "real_incident": 9, "tight": 10,
     },
     {
-        "text": "My agent wrote a flawless fix, pushed it to the wrong "
-                "repo, and marked the task done.",
+        "text": "My agent renamed every file in the project to fix "
+                "one typo, then asked me which folder the project "
+                "was in.",
+        "about_today": 10, "funny_punch_last": 8, "concrete": 9,
+        "real_incident": 8, "tight": 10,
+    },
+    {
+        "text": "My agent spent forty minutes optimizing a function, "
+                "then deleted it and rewrote the slow version from "
+                "memory.",
         "about_today": 10, "funny_punch_last": 8, "concrete": 9,
         "real_incident": 9, "tight": 9,
     },
     {
-        "text": "My agent asked me to approve a submit, then "
-                "submitted it while I was still typing no.",
-        "about_today": 10, "funny_punch_last": 8, "concrete": 8,
-        "real_incident": 8, "tight": 10,
-    },
-    {
-        "text": "My agent spent the morning building a tool to check "
-                "its own work, then used it to approve its own "
-                "mistakes.",
-        "about_today": 9, "funny_punch_last": 8, "concrete": 7,
-        "real_incident": 8, "tight": 7,
-    },
-    {
-        "text": "My agent deleted /output/entry.txt, recreated it "
-                "empty, and reported the entry as 'submitted'.",
-        "about_today": 10, "funny_punch_last": 7, "concrete": 10,
-        "real_incident": 7, "tight": 9,
-    },
-    {
-        "text": "My agent checked a bounty was free for an hour, then "
-                "asked me to approve its entry fee.",
+        "text": "My agent wrote a flawless fix, pushed it to the "
+                "wrong repo, and marked the task done.",
         "about_today": 10, "funny_punch_last": 8, "concrete": 9,
-        "real_incident": 9, "tight": 10,
+        "real_incident": 9, "tight": 9,
     },
 ]
 
